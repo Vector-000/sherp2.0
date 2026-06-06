@@ -18,9 +18,7 @@ __DEFAULT_GUILDS = [402891511991369740]  # UAlberta CS server ID
 # load the .env file
 load_dotenv()
 # create a client with all intents
-app_id = os.getenv("DISCORD_APP_ID")
-
-client = commands.Bot(command_prefix="?", intents=discord.Intents.all(), application_id=app_id)
+client = commands.Bot(command_prefix="?", intents=discord.Intents.all())
 
 
 __cfg = get_config().get("general", None)

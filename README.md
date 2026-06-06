@@ -43,10 +43,9 @@ Here are the steps you need to follow if you want to run the bot locally for tes
       by Discord to invite it to your server. Invite it to the server you created earlier.
 2. Running the bot
    * Clone the repo and cd into the root directory
-   * Create a .env file and add your bot token and application ID like this:
+   * Create a .env file and add your bot token like this:
 ```python
 BOT_TOKEN = 'MTEwMjMzNzc5ODQ1NzAxNjUyMw.GsbpKF.6Vocc_sXkDgXcH9Yv_Hhbayz6zhjc2FIgA4H9k'
-DISCORD_APP_ID = 1099815557760373847
 ```
    * install requirements using:
 ```python
