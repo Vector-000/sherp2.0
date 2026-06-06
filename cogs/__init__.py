@@ -8,7 +8,6 @@ from .faq import setup_faq
 from .votedelete import setup_votedelete
 from .sherpmail import setup_SherpMailbox_cog
 from .ship import setup_ship
-from .leaderboard import setup_leaderboard
 
 
 import asyncio
@@ -18,7 +17,7 @@ from aiohttp import ClientSession
 async def setup_all_cogs(bot, guilds, client=None):
     if not client:
         client = ClientSession()
-    asyncio.gather(
+    results = await asyncio.gather(
         setup_schedule_buddy(bot, guilds, client),
         setup_kattis(bot, guilds),
         setup_misc_cog(bot, guilds),
@@ -29,5 +28,8 @@ async def setup_all_cogs(bot, guilds, client=None):
         setup_votedelete(bot, guilds),
         setup_SherpMailbox_cog(bot, guilds),
         setup_ship(bot, guilds),
-        setup_leaderboard(bot, guilds),
+        return_exceptions=True,
     )
+    for result in results:
+        if isinstance(result, Exception):
+            print(f"Error loading cog: {result}")

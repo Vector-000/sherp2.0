@@ -18,7 +18,10 @@ __DEFAULT_GUILDS = [402891511991369740]  # UAlberta CS server ID
 # load the .env file
 load_dotenv()
 # create a client with all intents
-client = commands.Bot(command_prefix="?", intents=discord.Intents.all())
+app_id = os.getenv("DISCORD_APP_ID")
+
+client = commands.Bot(command_prefix="?", intents=discord.Intents.all(), application_id=app_id)
+_commands_synced = False
 
 
 __cfg = get_config().get("general", None)
@@ -31,7 +34,18 @@ GUILDS = (
 
 @client.event
 async def on_ready():
+    global _commands_synced
+
+    if _commands_synced:
+        return
+
     await setup_all_cogs(client, GUILDS)
+
+    for guild in GUILDS:
+        commands = await client.tree.sync(guild=guild)
+        print(f"Synced {len(commands)} slash commands for guild {guild.id}")
+
+    _commands_synced = True
 
 
 # load commands.json
