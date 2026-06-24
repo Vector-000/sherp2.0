@@ -19,8 +19,9 @@ Starboard = starboard_module.Starboard
 class FakeChannel:
     mention = "#general"
 
-    def __init__(self, nsfw=False):
+    def __init__(self, nsfw=False, channel_id=456):
         self._nsfw = nsfw
+        self.id = channel_id
 
     def is_nsfw(self):
         return self._nsfw
@@ -31,13 +32,13 @@ class FakeBot:
         return SimpleNamespace()
 
 
-def make_reaction(count, emoji="<:OnPhone:1062142401973588039>"):
+def make_reaction(count, emoji="<:OnPhone:1062142401973588039>", channel=None):
     return SimpleNamespace(
         emoji=emoji,
         count=count,
         message=SimpleNamespace(
             id=123,
-            channel=FakeChannel(),
+            channel=channel or FakeChannel(),
         ),
     )
 
@@ -59,12 +60,91 @@ def test_starboard_requires_three_matching_reactions_before_posting():
     starboard.update_reaction_count.assert_not_called()
 
 
-def test_starboard_ignores_non_matching_emoji_even_at_threshold():
+def test_starboard_ignores_other_emoji_under_five_reactions():
     starboard = Starboard(FakeBot())
     starboard.create_starboard_post = AsyncMock()
     starboard.update_reaction_count = AsyncMock()
 
-    asyncio.run(starboard.on_reaction_add(make_reaction(3, emoji="👍"), SimpleNamespace()))
+    asyncio.run(
+        starboard.on_reaction_add(make_reaction(3, emoji="👍"), SimpleNamespace())
+    )
 
     starboard.create_starboard_post.assert_not_called()
     starboard.update_reaction_count.assert_not_called()
+
+
+def test_starboard_posts_other_emoji_at_five_reactions():
+    starboard = Starboard(FakeBot())
+    starboard.create_starboard_post = AsyncMock()
+    starboard.update_reaction_count = AsyncMock()
+
+    asyncio.run(
+        starboard.on_reaction_add(make_reaction(4, emoji="👍"), SimpleNamespace())
+    )
+
+    starboard.create_starboard_post.assert_not_called()
+    starboard.update_reaction_count.assert_not_called()
+
+    asyncio.run(
+        starboard.on_reaction_add(make_reaction(5, emoji="👍"), SimpleNamespace())
+    )
+
+    starboard.create_starboard_post.assert_awaited_once()
+    starboard.update_reaction_count.assert_not_called()
+
+
+def test_starboard_tracks_only_the_emoji_that_created_the_post():
+    starboard = Starboard(FakeBot())
+    starboard.create_starboard_post = AsyncMock()
+    starboard.update_reaction_count = AsyncMock()
+    starboard.starboard_msgs[123] = {"post_id": 789, "emoji": "👍"}
+
+    asyncio.run(
+        starboard.on_reaction_add(
+            make_reaction(6, emoji="<:OnPhone:1062142401973588039>"),
+            SimpleNamespace(),
+        )
+    )
+
+    starboard.update_reaction_count.assert_not_called()
+
+    asyncio.run(
+        starboard.on_reaction_add(make_reaction(6, emoji="👍"), SimpleNamespace())
+    )
+
+    starboard.update_reaction_count.assert_awaited_once()
+
+
+def test_starboard_ignores_reactions_in_starboard_channel():
+    starboard = Starboard(FakeBot())
+    starboard.create_starboard_post = AsyncMock()
+    starboard.update_reaction_count = AsyncMock()
+
+    asyncio.run(
+        starboard.on_reaction_add(
+            make_reaction(
+                5,
+                emoji="👍",
+                channel=FakeChannel(channel_id=starboard.starboard_channel_id),
+            ),
+            SimpleNamespace(),
+        )
+    )
+
+    starboard.create_starboard_post.assert_not_called()
+    starboard.update_reaction_count.assert_not_called()
+
+
+def test_starboard_reacts_to_post_with_starboarded_emoji():
+    starboard = Starboard(FakeBot())
+    starboard._build_embeds = AsyncMock(return_value=[])
+    starboard._get_open_msg_view = AsyncMock(return_value=SimpleNamespace())
+    starboarded_msg = SimpleNamespace(id=789, add_reaction=AsyncMock())
+    starboard.starboard_channel = SimpleNamespace(
+        send=AsyncMock(return_value=starboarded_msg)
+    )
+
+    asyncio.run(starboard.create_starboard_post(make_reaction(5, emoji="👍")))
+
+    starboarded_msg.add_reaction.assert_awaited_once_with("👍")
+    assert starboard.starboard_msgs[123] == {"post_id": 789, "emoji": "👍"}

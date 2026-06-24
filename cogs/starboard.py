@@ -5,36 +5,54 @@ from discord.ext import commands
 from helper import get_config
 
 __DEFAULT_CHANNEL_ID = 1133260871049691257
-__DEFAULT_EMOJI_STR = "<:OnPhone:1062142401973588039>"
-__DEFAULT_THRESHOLD = 3
+__DEFAULT_ONPHONE_EMOJI_STR = "<:OnPhone:1062142401973588039>"
+__DEFAULT_ONPHONE_THRESHOLD = 3
+__DEFAULT_OTHER_THRESHOLD = 5
 
 __cfg = get_config().get("starboard", None)
 STARBOARD_CHANNEL_ID = (
     __cfg.get("channel", __DEFAULT_CHANNEL_ID) if __cfg else __DEFAULT_CHANNEL_ID
 )
-STARBOARD_EMOJI_STR = (
-    __cfg.get("emoji", __DEFAULT_EMOJI_STR) if __cfg else __DEFAULT_EMOJI_STR
+STARBOARD_ONPHONE_EMOJI_STR = (
+    __cfg.get("onphone_emoji", __cfg.get("emoji", __DEFAULT_ONPHONE_EMOJI_STR))
+    if __cfg
+    else __DEFAULT_ONPHONE_EMOJI_STR
 )
 
-STARBOARD_THESHOLD = (
-    __cfg.get("threshold", __DEFAULT_THRESHOLD) if __cfg else __DEFAULT_THRESHOLD
+STARBOARD_ONPHONE_THRESHOLD = (
+    __cfg.get("onphone_threshold", __DEFAULT_ONPHONE_THRESHOLD)
+    if __cfg
+    else __DEFAULT_ONPHONE_THRESHOLD
+)
+
+STARBOARD_OTHER_THRESHOLD = (
+    __cfg.get("other_threshold", __DEFAULT_OTHER_THRESHOLD)
+    if __cfg
+    else __DEFAULT_OTHER_THRESHOLD
 )
 
 
 class Starboard(commands.Cog):
     def __init__(self, bot: discord.Client):
-        self.starboard_emoji_str = STARBOARD_EMOJI_STR
-        self.threshold = STARBOARD_THESHOLD
-        # Starboarded Message ID -> ID of the message the bot sent.
+        self.onphone_emoji_str = STARBOARD_ONPHONE_EMOJI_STR
+        self.onphone_threshold = STARBOARD_ONPHONE_THRESHOLD
+        self.other_threshold = STARBOARD_OTHER_THRESHOLD
+        self.starboard_channel_id = STARBOARD_CHANNEL_ID
+        # Starboarded Message ID -> {"post_id": bot post ID, "emoji": starboard emoji}
         self.starboard_msgs = dict()
-        self.starboard_channel = bot.get_channel(STARBOARD_CHANNEL_ID)
+        self.starboard_channel = bot.get_channel(self.starboard_channel_id)
 
     async def cog_load(self):
         await super().cog_load()
         print("Starboard Cog loaded.")
 
+    def _get_threshold(self, emoji: str) -> int:
+        if emoji == self.onphone_emoji_str:
+            return self.onphone_threshold
+        return self.other_threshold
+
     def _get_title(self, react: discord.Reaction) -> str:
-        return f"{self.starboard_emoji_str} x **{react.count}** |{react.message.channel.mention}"
+        return f"{react.emoji} x **{react.count}** |{react.message.channel.mention}"
 
     async def _get_open_msg_view(self, msg: discord.Message) -> discord.ui.View:
         btn = discord.ui.Button(label="Jump", url=msg.jump_url)
@@ -49,7 +67,7 @@ class Starboard(commands.Cog):
         return v.add_item(discord.ui.Button(label="Context", url=reply.jump_url))
 
     async def update_reaction_count(self, react: discord.Reaction) -> None:
-        msg_id = self.starboard_msgs[react.message.id]
+        msg_id = self.starboard_msgs[react.message.id]["post_id"]
         msg: discord.Message = await self.starboard_channel.fetch_message(msg_id)
         await msg.edit(content=self._get_title(react))
 
@@ -103,30 +121,37 @@ class Starboard(commands.Cog):
         msg: discord.Message = await self.starboard_channel.send(
             self._get_title(react), embeds=embeds, view=open_msg_view
         )
-        self.starboard_msgs[react.message.id] = msg.id
+        self.starboard_msgs[react.message.id] = {
+            "post_id": msg.id,
+            "emoji": str(react.emoji),
+        }
+        await msg.add_reaction(react.emoji)
 
     @commands.Cog.listener()
     async def on_reaction_add(self, react: discord.Reaction, _: discord.User):
-        if str(react.emoji) != self.starboard_emoji_str:
-            return
-
         if react.message.channel.is_nsfw():
             return
 
-        if react.count < self.threshold:
+        if getattr(react.message.channel, "id", None) == self.starboard_channel_id:
+            return
+
+        emoji = str(react.emoji)
+        threshold = self._get_threshold(emoji)
+        if react.count < threshold:
             return
 
         if react.message.id in self.starboard_msgs:
-            await self.update_reaction_count(react)
+            if self.starboard_msgs[react.message.id]["emoji"] == emoji:
+                await self.update_reaction_count(react)
         else:
             await self.create_starboard_post(react)
 
     @commands.Cog.listener()
     async def on_reaction_remove(self, react: discord.Reaction, _: discord.User):
-        if str(react.emoji) != self.starboard_emoji_str:
+        if not react.message.id in self.starboard_msgs:
             return
 
-        if not react.message.id in self.starboard_msgs:
+        if self.starboard_msgs[react.message.id]["emoji"] != str(react.emoji):
             return
 
         await self.update_reaction_count(react)
@@ -134,7 +159,7 @@ class Starboard(commands.Cog):
     @commands.Cog.listener()
     async def on_message_delete(self, msg: discord.Message):
         if msg_id := self.starboard_msgs.get(msg.id, None):
-            m = await self.starboard_channel.fetch_message(msg_id)
+            m = await self.starboard_channel.fetch_message(msg_id["post_id"])
             await m.delete()
 
 

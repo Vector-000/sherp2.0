@@ -15,10 +15,9 @@ timer=10
 [starboard]  # Similarly this is for the starboard cog.
 channel=1139734225390669875         # The channel ID where the bot should post the starboard
                                     # messages.
-emoji="<:OnP:1139749947357544500>"  # The string representation of the emoji to be used
-                                    # as the starboard emoji.
-threshold=1                         # The threshold over which the message is posted to the
-                                    # starboard channel.
+onphone_emoji="<:OnP:1139749947357544500>"  # The string representation of the OnPhone emoji.
+onphone_threshold=3                         # OnPhone reactions needed to post to starboard.
+other_threshold=5                           # Other emoji reactions needed to post to starboard.
 
 [faq]
 gsheet_url = "https://docs.google.com/spreadsheets/d/15vOVv21KZETGxBEBY46H-l5C0WFjLaBUg1xUzFvSk6I/edit#gid=0" # replace this url with your gsheet url
