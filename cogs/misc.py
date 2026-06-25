@@ -26,7 +26,9 @@ class Misc(commands.Cog):
             color=3447003,
             description="Here's a bunch of gigachads together",
         )
-        embed.set_image(url="https://cdn.discordapp.com/attachments/968245983697842196/1101298256459346000/IMG_2316.jpg")
+        embed.set_image(
+            url="https://cdn.discordapp.com/attachments/968245983697842196/1101298256459346000/IMG_2316.jpg"
+        )
         await ctx.send(embed=embed)
 
     @commands.hybrid_command(name="bbq24", description="Post the BBQ 24 group photo.")
@@ -34,7 +36,7 @@ class Misc(commands.Cog):
         embed = discord.Embed(
             title="BBQ 24",
             color=3447003,
-            description="Here's a bunch of gigachads together",
+            description="Here’s a bunch of trad coders together",
         )
         file = discord.File("attachments/bbq24.jpeg", filename="bbq24.jpeg")
         embed.set_image(url="attachment://bbq24.jpeg")
@@ -76,13 +78,17 @@ class Misc(commands.Cog):
 
     @commands.hybrid_command(name="java", description="Have you tried Kotlin?")
     async def java(self, ctx):
-        embed = discord.Embed(title="Java", color=3447003, description="Have you tried Kotlin?")
+        embed = discord.Embed(
+            title="Java", color=3447003, description="Have you tried Kotlin?"
+        )
         embed.set_image(
             url="https://cdn.discordapp.com/attachments/968245983697842196/1101253691392143410/41BDFE8C-2BC0-4E2B-A3C9-539962B71707.jpg"
         )
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command(name="sync", description="Sync slash commands for this server.")
+    @commands.hybrid_command(
+        name="sync", description="Sync slash commands for this server."
+    )
     async def sync(self, ctx):
         # commands = self.__bot.tree.get_commands(guild=ctx.guild)
         commands = await self.__bot.tree.sync(guild=ctx.guild)
