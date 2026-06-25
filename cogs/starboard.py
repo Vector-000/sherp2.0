@@ -127,6 +127,14 @@ class Starboard(commands.Cog):
             color=discord.Color.gold(),
         ).set_image(url=PROPAGANDA_GIF_URL)
 
+    async def _try_add_starboard_reaction(
+        self, msg: discord.Message, emoji: discord.PartialEmoji | str
+    ) -> None:
+        try:
+            await msg.add_reaction(emoji)
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
     async def _send_starboard_copy(
         self,
         channel: discord.abc.Messageable,
@@ -142,7 +150,7 @@ class Starboard(commands.Cog):
             "emoji": str(react.emoji),
             "channel": channel,
         }
-        await msg.add_reaction(react.emoji)
+        await self._try_add_starboard_reaction(msg, react.emoji)
 
     async def _handle_starboard_send_failure(
         self,

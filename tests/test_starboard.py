@@ -164,6 +164,34 @@ def test_starboard_reacts_to_post_with_starboarded_emoji():
     }
 
 
+def test_starboard_does_not_fallback_when_only_add_reaction_fails():
+    starboard = Starboard(FakeBot())
+    starboard._build_embeds = AsyncMock(return_value=[])
+    starboard._get_open_msg_view = AsyncMock(return_value=SimpleNamespace())
+    starboarded_msg = SimpleNamespace(
+        id=789,
+        add_reaction=AsyncMock(side_effect=make_forbidden()),
+    )
+    starboard.starboard_channel = SimpleNamespace(
+        send=AsyncMock(return_value=starboarded_msg)
+    )
+    source_channel = FakeChannel()
+
+    asyncio.run(
+        starboard.create_starboard_post(
+            make_reaction(5, emoji="👍", channel=source_channel)
+        )
+    )
+
+    starboard.starboard_channel.send.assert_awaited_once()
+    source_channel.send.assert_not_called()
+    assert starboard.starboard_msgs[123] == {
+        "post_id": 789,
+        "emoji": "👍",
+        "channel": starboard.starboard_channel,
+    }
+
+
 def test_starboard_forbidden_onphone_case_posts_fallback_to_source_channel():
     starboard = Starboard(FakeBot())
     original_embed = discord.Embed(description="original message")
