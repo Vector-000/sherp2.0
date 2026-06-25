@@ -1,8 +1,11 @@
+import logging
 from typing import List, Optional
 import discord
 from discord.ext import commands
 
 from helper import get_config
+
+logger = logging.getLogger(__name__)
 
 __DEFAULT_CHANNEL_ID = 1133260871049691257
 __DEFAULT_ONPHONE_EMOJI_STR = "<:OnPhone:1062142401973588039>"
@@ -51,6 +54,9 @@ class Starboard(commands.Cog):
         if emoji == self.onphone_emoji_str:
             return self.onphone_threshold
         return self.other_threshold
+
+    def _get_channel_id(self, channel: discord.abc.Messageable) -> Optional[int]:
+        return getattr(channel, "id", None)
 
     def _get_qualifying_reactions(
         self, msg: discord.Message, fallback_react: Optional[discord.Reaction] = None
@@ -111,7 +117,14 @@ class Starboard(commands.Cog):
             msg = await channel.fetch_message(record["post_id"])
             await msg.delete()
         except discord.HTTPException:
-            pass
+            logger.warning(
+                "Failed to delete starboard post source_message_id=%s "
+                "starboard_post_id=%s starboard_channel_id=%s",
+                message_id,
+                record["post_id"],
+                self._get_channel_id(channel),
+                exc_info=True,
+            )
 
     def _get_first_viable_attachment_url(self, atmnts: List[discord.Attachment]) -> str:
         for a in atmnts:
@@ -172,7 +185,14 @@ class Starboard(commands.Cog):
         try:
             await msg.add_reaction(emoji)
         except (discord.Forbidden, discord.HTTPException):
-            pass
+            logger.warning(
+                "Failed to add reaction to starboard post starboard_post_id=%s "
+                "starboard_channel_id=%s emoji=%s",
+                getattr(msg, "id", None),
+                self._get_channel_id(getattr(msg, "channel", None)),
+                emoji,
+                exc_info=True,
+            )
 
     async def _send_starboard_copy(
         self,
@@ -202,15 +222,38 @@ class Starboard(commands.Cog):
         open_msg_view: discord.ui.View,
     ) -> None:
         fallback_embeds = embeds + [self._get_no_starboard_access_embed()]
-        await self._send_starboard_copy(
-            react.message.channel, react, fallback_embeds, open_msg_view
-        )
+        try:
+            await self._send_starboard_copy(
+                react.message.channel, react, fallback_embeds, open_msg_view
+            )
+        except discord.HTTPException:
+            logger.exception(
+                "Failed to send starboard fallback source_message_id=%s "
+                "source_channel_id=%s starboard_channel_id=%s emoji=%s "
+                "reaction_count=%s",
+                react.message.id,
+                self._get_channel_id(react.message.channel),
+                self.starboard_channel_id,
+                react.emoji,
+                react.count,
+            )
+            raise
 
     async def create_starboard_post(self, react: discord.Reaction):
         embeds = await self._build_embeds(react.message)
         open_msg_view = await self._get_open_msg_view(react.message)
 
         if self.starboard_channel is None:
+            logger.warning(
+                "Starboard channel unavailable; sending fallback "
+                "source_message_id=%s source_channel_id=%s "
+                "starboard_channel_id=%s emoji=%s reaction_count=%s",
+                react.message.id,
+                self._get_channel_id(react.message.channel),
+                self.starboard_channel_id,
+                react.emoji,
+                react.count,
+            )
             await self._handle_starboard_send_failure(react, embeds, open_msg_view)
             return
 
@@ -218,7 +261,17 @@ class Starboard(commands.Cog):
             await self._send_starboard_copy(
                 self.starboard_channel, react, embeds, open_msg_view
             )
-        except discord.Forbidden:
+        except discord.HTTPException:
+            logger.exception(
+                "Failed to send starboard post to configured channel "
+                "source_message_id=%s source_channel_id=%s "
+                "starboard_channel_id=%s emoji=%s reaction_count=%s",
+                react.message.id,
+                self._get_channel_id(react.message.channel),
+                self.starboard_channel_id,
+                react.emoji,
+                react.count,
+            )
             await self._handle_starboard_send_failure(react, embeds, open_msg_view)
 
     @commands.Cog.listener()

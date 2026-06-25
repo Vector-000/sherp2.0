@@ -1,5 +1,6 @@
 import asyncio
 import importlib.util
+import logging
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -242,7 +243,7 @@ def test_starboard_reacts_to_post_with_starboarded_emoji():
     }
 
 
-def test_starboard_does_not_fallback_when_only_add_reaction_fails():
+def test_starboard_does_not_fallback_when_only_add_reaction_fails(caplog):
     starboard = Starboard(FakeBot())
     starboard._build_embeds = AsyncMock(return_value=[])
     starboard._get_open_msg_view = AsyncMock(return_value=SimpleNamespace())
@@ -255,11 +256,12 @@ def test_starboard_does_not_fallback_when_only_add_reaction_fails():
     )
     source_channel = FakeChannel()
 
-    asyncio.run(
-        starboard.create_starboard_post(
-            make_reaction(5, emoji="👍", channel=source_channel)
+    with caplog.at_level(logging.WARNING, logger=starboard_module.logger.name):
+        asyncio.run(
+            starboard.create_starboard_post(
+                make_reaction(5, emoji="👍", channel=source_channel)
+            )
         )
-    )
 
     starboard.starboard_channel.send.assert_awaited_once()
     source_channel.send.assert_not_called()
@@ -268,9 +270,11 @@ def test_starboard_does_not_fallback_when_only_add_reaction_fails():
         "emoji": "👍",
         "channel": starboard.starboard_channel,
     }
+    assert "Failed to add reaction to starboard post" in caplog.text
+    assert "starboard_post_id=789" in caplog.text
 
 
-def test_starboard_forbidden_onphone_case_posts_fallback_to_source_channel():
+def test_starboard_forbidden_onphone_case_posts_fallback_to_source_channel(caplog):
     starboard = Starboard(FakeBot())
     original_embed = discord.Embed(description="original message")
     starboard._build_embeds = AsyncMock(return_value=[original_embed])
@@ -282,9 +286,10 @@ def test_starboard_forbidden_onphone_case_posts_fallback_to_source_channel():
     source_channel = FakeChannel()
     source_channel.send = AsyncMock(return_value=fallback_msg)
 
-    asyncio.run(
-        starboard.create_starboard_post(make_reaction(3, channel=source_channel))
-    )
+    with caplog.at_level(logging.WARNING, logger=starboard_module.logger.name):
+        asyncio.run(
+            starboard.create_starboard_post(make_reaction(3, channel=source_channel))
+        )
 
     source_channel.send.assert_awaited_once()
     _, kwargs = source_channel.send.call_args
@@ -305,6 +310,9 @@ def test_starboard_forbidden_onphone_case_posts_fallback_to_source_channel():
         "emoji": "<:OnPhone:1062142401973588039>",
         "channel": source_channel,
     }
+    assert "Failed to send starboard post to configured channel" in caplog.text
+    assert "source_message_id=123" in caplog.text
+    assert f"starboard_channel_id={starboard.starboard_channel_id}" in caplog.text
 
 
 def test_starboard_forbidden_other_emoji_posts_fallback_to_source_channel():
@@ -343,3 +351,22 @@ def test_starboard_forbidden_other_emoji_posts_fallback_to_source_channel():
         "emoji": "👍",
         "channel": source_channel,
     }
+
+
+def test_starboard_delete_failure_is_logged(caplog):
+    starboard = Starboard(FakeBot())
+    starboard_channel = SimpleNamespace(
+        fetch_message=AsyncMock(side_effect=make_forbidden())
+    )
+    starboard.starboard_msgs[123] = {
+        "post_id": 789,
+        "emoji": "<:OnPhone:1062142401973588039>",
+        "channel": starboard_channel,
+    }
+
+    with caplog.at_level(logging.WARNING, logger=starboard_module.logger.name):
+        asyncio.run(starboard.delete_starboard_post(123))
+
+    assert "Failed to delete starboard post" in caplog.text
+    assert "source_message_id=123" in caplog.text
+    assert "starboard_post_id=789" in caplog.text
