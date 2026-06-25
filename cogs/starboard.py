@@ -151,9 +151,6 @@ class Starboard(commands.Cog):
         embeds: List[discord.Embed],
         open_msg_view: discord.ui.View,
     ) -> None:
-        if str(react.emoji) == self.onphone_emoji_str:
-            return
-
         fallback_embeds = embeds + [self._get_no_starboard_access_embed()]
         await self._send_starboard_copy(
             react.message.channel, react, fallback_embeds, open_msg_view
