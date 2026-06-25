@@ -8,6 +8,7 @@ __DEFAULT_CHANNEL_ID = 1133260871049691257
 __DEFAULT_ONPHONE_EMOJI_STR = "<:OnPhone:1062142401973588039>"
 __DEFAULT_ONPHONE_THRESHOLD = 3
 __DEFAULT_OTHER_THRESHOLD = 5
+PROPAGANDA_GIF_URL = "https://tenor.com/en-CA/view/propaganda-gif-19992759"
 
 __cfg = get_config().get("starboard", None)
 STARBOARD_CHANNEL_ID = (
@@ -38,7 +39,7 @@ class Starboard(commands.Cog):
         self.onphone_threshold = STARBOARD_ONPHONE_THRESHOLD
         self.other_threshold = STARBOARD_OTHER_THRESHOLD
         self.starboard_channel_id = STARBOARD_CHANNEL_ID
-        # Starboarded Message ID -> {"post_id": bot post ID, "emoji": starboard emoji}
+        # Starboarded Message ID -> {"post_id": bot post ID, "emoji": starboard emoji, "channel": post channel}
         self.starboard_msgs = dict()
         self.starboard_channel = bot.get_channel(self.starboard_channel_id)
 
@@ -67,8 +68,10 @@ class Starboard(commands.Cog):
         return v.add_item(discord.ui.Button(label="Context", url=reply.jump_url))
 
     async def update_reaction_count(self, react: discord.Reaction) -> None:
-        msg_id = self.starboard_msgs[react.message.id]["post_id"]
-        msg: discord.Message = await self.starboard_channel.fetch_message(msg_id)
+        record = self.starboard_msgs[react.message.id]
+        msg_id = record["post_id"]
+        channel = record.get("channel", self.starboard_channel)
+        msg: discord.Message = await channel.fetch_message(msg_id)
         await msg.edit(content=self._get_title(react))
 
     def _get_first_viable_attachment_url(self, atmnts: List[discord.Attachment]) -> str:
@@ -115,17 +118,61 @@ class Starboard(commands.Cog):
 
         return [main_embed, reply_embed]
 
-    async def create_starboard_post(self, react: discord.Reaction):
-        embeds = await self._build_embeds(react.message)
-        open_msg_view = await self._get_open_msg_view(react.message)
-        msg: discord.Message = await self.starboard_channel.send(
+    def _get_no_starboard_access_embed(self) -> discord.Embed:
+        return discord.Embed(
+            description=(
+                "I would love to starboard your message but I don't have access "
+                f"to that channel. Please {self.onphone_emoji_str} my petition\n"
+                f"{PROPAGANDA_GIF_URL}"
+            ),
+            color=discord.Color.gold(),
+        ).set_image(url=PROPAGANDA_GIF_URL)
+
+    async def _send_starboard_copy(
+        self,
+        channel: discord.abc.Messageable,
+        react: discord.Reaction,
+        embeds: List[discord.Embed],
+        open_msg_view: discord.ui.View,
+    ) -> None:
+        msg: discord.Message = await channel.send(
             self._get_title(react), embeds=embeds, view=open_msg_view
         )
         self.starboard_msgs[react.message.id] = {
             "post_id": msg.id,
             "emoji": str(react.emoji),
+            "channel": channel,
         }
         await msg.add_reaction(react.emoji)
+
+    async def _handle_starboard_send_failure(
+        self,
+        react: discord.Reaction,
+        embeds: List[discord.Embed],
+        open_msg_view: discord.ui.View,
+    ) -> None:
+        if str(react.emoji) == self.onphone_emoji_str:
+            return
+
+        fallback_embeds = embeds + [self._get_no_starboard_access_embed()]
+        await self._send_starboard_copy(
+            react.message.channel, react, fallback_embeds, open_msg_view
+        )
+
+    async def create_starboard_post(self, react: discord.Reaction):
+        embeds = await self._build_embeds(react.message)
+        open_msg_view = await self._get_open_msg_view(react.message)
+
+        if self.starboard_channel is None:
+            await self._handle_starboard_send_failure(react, embeds, open_msg_view)
+            return
+
+        try:
+            await self._send_starboard_copy(
+                self.starboard_channel, react, embeds, open_msg_view
+            )
+        except discord.Forbidden:
+            await self._handle_starboard_send_failure(react, embeds, open_msg_view)
 
     @commands.Cog.listener()
     async def on_reaction_add(self, react: discord.Reaction, _: discord.User):
@@ -159,7 +206,8 @@ class Starboard(commands.Cog):
     @commands.Cog.listener()
     async def on_message_delete(self, msg: discord.Message):
         if msg_id := self.starboard_msgs.get(msg.id, None):
-            m = await self.starboard_channel.fetch_message(msg_id["post_id"])
+            channel = msg_id.get("channel", self.starboard_channel)
+            m = await channel.fetch_message(msg_id["post_id"])
             await m.delete()
 
 
