@@ -117,4 +117,8 @@ async def on_message(message: discord.Message):
 
 
 # run the bot using the token in the .env file
-client.run(os.getenv("BOT_TOKEN"))
+bot_token = os.getenv("BOT_TOKEN")
+if bot_token is None:
+    raise RuntimeError("BOT_TOKEN must be set")
+
+client.run(bot_token)

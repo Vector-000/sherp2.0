@@ -64,6 +64,11 @@ uv run ruff format .
 uv run ruff check .
 ```
 
+Type check Python code with Ty:
+```bash
+uv run ty check
+```
+
 CI and Docker install from `pyproject.toml` and the committed `uv.lock`.
 
 Pull requests are welcome. For major changes, please open an issue first

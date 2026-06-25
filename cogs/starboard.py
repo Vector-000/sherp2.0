@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import List, Optional, cast
 import discord
 from discord.ext import commands
 
@@ -55,7 +55,7 @@ class Starboard(commands.Cog):
             return self.onphone_threshold
         return self.other_threshold
 
-    def _get_channel_id(self, channel: discord.abc.Messageable) -> Optional[int]:
+    def _get_channel_id(self, channel: object) -> Optional[int]:
         return getattr(channel, "id", None)
 
     def _get_qualifying_reactions(
@@ -126,10 +126,13 @@ class Starboard(commands.Cog):
                 exc_info=True,
             )
 
-    def _get_first_viable_attachment_url(self, atmnts: List[discord.Attachment]) -> str:
+    def _get_first_viable_attachment_url(
+        self, atmnts: List[discord.Attachment]
+    ) -> Optional[str]:
         for a in atmnts:
             if a.url.split("?")[0].endswith(("png", "jpeg", "jpg", "gif", "webp")):
                 return a.url
+        return None
 
     def _get_starboard_embed(self, msg: discord.Message) -> discord.Embed:
         embed = discord.Embed(
@@ -180,7 +183,7 @@ class Starboard(commands.Cog):
         ).set_image(url=PROPAGANDA_GIF_URL)
 
     async def _try_add_starboard_reaction(
-        self, msg: discord.Message, emoji: discord.PartialEmoji | str
+        self, msg: discord.Message, emoji: discord.PartialEmoji | discord.Emoji | str
     ) -> None:
         try:
             await msg.add_reaction(emoji)
@@ -257,9 +260,10 @@ class Starboard(commands.Cog):
             await self._handle_starboard_send_failure(react, embeds, open_msg_view)
             return
 
+        starboard_channel = cast(discord.abc.Messageable, self.starboard_channel)
         try:
             await self._send_starboard_copy(
-                self.starboard_channel, react, embeds, open_msg_view
+                starboard_channel, react, embeds, open_msg_view
             )
         except discord.HTTPException:
             logger.exception(

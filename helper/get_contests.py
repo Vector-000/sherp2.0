@@ -1,8 +1,9 @@
-import bs4
-from bs4 import BeautifulSoup
-from aiohttp import ClientSession
 import asyncio
 import json
+
+import bs4
+from aiohttp import ClientSession
+from bs4 import BeautifulSoup
 
 
 async def get_contests():
@@ -15,10 +16,20 @@ async def get_contests():
         html = await resp.text(encoding="utf-8")
         soup = BeautifulSoup(html, "html.parser")
 
+        if soup.tbody is None:
+            raise RuntimeError("Could not find Kattis contests table")
+
         for item in soup.tbody.children:
             if type(item) is not bs4.element.Tag:
                 continue
-            contest = item.a["href"].split("/")[-1]
+            if item.a is None:
+                continue
+
+            href = item.a.get("href")
+            if not isinstance(href, str):
+                continue
+
+            contest = href.split("/")[-1]
             assert contest, "Contest url not found"
 
             contests.append(contest)

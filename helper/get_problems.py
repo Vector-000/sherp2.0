@@ -1,8 +1,9 @@
-import bs4
-from bs4 import BeautifulSoup
-from aiohttp import ClientSession
 import asyncio
 import json
+
+import bs4
+from aiohttp import ClientSession
+from bs4 import BeautifulSoup
 
 LAST_PAGE = 37  # can change as kattis adds more problems
 
@@ -22,13 +23,27 @@ async def get_problems():
             html = await resp.text(encoding="utf-8")
             soup = BeautifulSoup(html, "html.parser")
 
+            if soup.tbody is None:
+                raise RuntimeError("Could not find Kattis problems table")
+
             for item in soup.tbody.children:
                 if type(item) is not bs4.element.Tag:
                     continue
-                problem_id = item.a["href"].split("/")[-1]
+                if item.a is None or item.span is None:
+                    continue
+
+                href = item.a.get("href")
+                if not isinstance(href, str):
+                    continue
+
+                problem_id = href.split("/")[-1]
                 assert problem_id, "Problem ID not valid"
 
-                match item.span.next_sibling.strip():
+                difficulty_node = item.span.next_sibling
+                if difficulty_node is None:
+                    continue
+
+                match str(difficulty_node).strip():
                     case "Easy":
                         easy.append(problem_id)
                     case "Medium":
@@ -37,7 +52,7 @@ async def get_problems():
                         hard.append(problem_id)
                     case _:
                         assert False, "Unknown problem difficulty"
-        asyncio.sleep(3)
+        await asyncio.sleep(3)
 
     print(f"Easy: {len(easy)}, Medium: {len(medium)}, Hard: {len(hard)}")
     data = {"easy": easy, "medium": medium, "hard": hard}

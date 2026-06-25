@@ -35,6 +35,11 @@ day_lookup = {"U": 0, "M": 1, "T": 2, "W": 3, "R": 4, "F": 5, "S": 6}
 __draw_sched_font = ImageFont.truetype("cogs/helpers/fonts/tahoma.ttf", 19)
 
 
+def get_text_width(text: str) -> float:
+    left, _, right, _ = __draw_sched_font.getbbox(text)
+    return right - left
+
+
 def str_t_to_int(str_t):
     h = int(str_t[0:2])
     m = int(str_t[3:5])
@@ -65,10 +70,8 @@ def get_draw_text(course_class, location=""):
         for i in range(len(instructor_full) - 1):
             instructor_initials.append(instructor_full[i][0].upper() + ". ")
         instructor_text = "".join(instructor_initials) + instructor_full[-1]
-        if (
-            __draw_sched_font.getsize(instructor_text)[0] > box_width - 3
-        ):  # pop until fit with elipses
-            while __draw_sched_font.getsize(instructor_text + "...")[0] > box_width - 3:
+        if get_text_width(instructor_text) > box_width - 3:
+            while get_text_width(instructor_text + "...") > box_width - 3:
                 instructor_text = instructor_text[:-1]
             instructor_text += "..."
 

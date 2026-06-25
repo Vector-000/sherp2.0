@@ -1,7 +1,7 @@
 import asyncio
 import json
 from io import BytesIO
-from typing import Optional
+from typing import Any, Optional
 
 import discord
 from aiohttp import ClientSession
@@ -34,13 +34,13 @@ class ScheduleSession:
         self.http = http_client
         self.courses = courses
         self.intr = None
-        self.__timer = None
-        self.raw_schedules = None
-        self.pages = []
-        self.aliases = []
+        self.__timer: Optional[asyncio.Task[None]] = None
+        self.raw_schedules: Optional[dict[str, Any]] = None
+        self.pages: list[Any] = []
+        self.aliases: list[Any] = []
         self.current_page = 0
-        self.response_embed = None
-        self.author = None
+        self.response_embed: Optional[discord.Message] = None
+        self.author: Optional[discord.User | discord.Member] = None
 
     async def start(self, intr: discord.Interaction):
         self.author = intr.user
@@ -90,6 +90,8 @@ class ScheduleSession:
 
     async def stop(self):
         self.__bot.remove_listener(self.on_reaction_add)
+        if self.response_embed is None:
+            return
         await self.response_embed.clear_reactions()
         print("Stopped Schedule Session")
 
@@ -99,7 +101,7 @@ class ScheduleSession:
                 self.__timer.cancel()
         self.__timer = self.__bot.loop.create_task(self.timeout())
 
-    def build_embed(self, display_name, schedule) -> Embed:
+    def build_embed(self, display_name, schedule) -> tuple[Embed, discord.File]:
         embed = Embed(
             description=f"Listing **{self.current_page + 1}**\
             of **{len(self.pages)}** pages",
@@ -123,12 +125,18 @@ class ScheduleSession:
             return False
         embed, file = self.build_embed(intr.user.display_name, self.pages[0])
         channel = self.__bot.get_channel(intr.channel_id)
+        if channel is None:
+            await intr.response.send_message("Could not find this channel.")
+            return False
         self.response_embed = await channel.send(embed=embed, file=file)
         await self.response_embed.add_reaction(LEFT_EMOJI)
         await self.response_embed.add_reaction(RIGHT_EMOJI)
         return True
 
     async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User):
+        if self.response_embed is None or self.author is None:
+            return
+
         if (reaction.message.id != self.response_embed.id) or (
             user.id != self.author.id
         ):
@@ -160,7 +168,9 @@ class Schedubuddy(commands.GroupCog, name="schedubuddy"):
         await super().cog_load()
         print("ScheduleBuddy Cog loaded.")
 
-    def get_term_id(self, year: str, term: str):
+    def get_term_id(
+        self, year: app_commands.Choice[str], term: app_commands.Choice[str]
+    ) -> str:
         match (year.value, term.value):
             case ("2024", "Winter"):
                 return "1860"
@@ -255,15 +265,15 @@ class Schedubuddy(commands.GroupCog, name="schedubuddy"):
         year: app_commands.Choice[str],
         term: app_commands.Choice[str],
         course1: str,
-        course2: Optional[str] = "",
-        course3: Optional[str] = "",
-        course4: Optional[str] = "",
-        course5: Optional[str] = "",
-        course6: Optional[str] = "",
-        course7: Optional[str] = "",
-        start_time: Optional[str] = "10:00 AM",
-        evening_pref: Optional[str] = "1",
-        consec_pref: Optional[str] = "1",
+        course2: str = "",
+        course3: str = "",
+        course4: str = "",
+        course5: str = "",
+        course6: str = "",
+        course7: str = "",
+        start_time: str = "10:00 AM",
+        evening_pref: str = "1",
+        consec_pref: str = "1",
     ):
         term_id = self.get_term_id(year, term)
         session = ScheduleSession(

@@ -1,3 +1,5 @@
+from typing import Any, Optional
+
 import pandas as pd
 import discord
 from discord.ext import commands
@@ -13,7 +15,7 @@ ADMIN_ROLE = __cfg.get("admin_role_name") if __cfg else "mod"
 
 class Faq(commands.GroupCog, name="faq"):
     def __init__(self):
-        self.faq_sheet = None
+        self.faq_sheet: Any = None
 
     async def cog_load(self):
         await super().cog_load()
@@ -22,13 +24,18 @@ class Faq(commands.GroupCog, name="faq"):
     async def load_sheet(self):
         self.faq_sheet = await get_sheet()
 
+    def _sheet(self) -> Any:
+        if self.faq_sheet is None:
+            raise RuntimeError("FAQ sheet has not been loaded")
+        return self.faq_sheet
+
     def isAdmin(self, user):
         mod_role = discord.utils.get(user.guild.roles, name=ADMIN_ROLE)
         return mod_role in user.roles
 
     @app_commands.command(name="list", description="view everything in the faq sheet")
     async def list(self, intr: discord.Interaction):
-        data = self.faq_sheet.get_all_records()
+        data = self._sheet().get_all_records()
         df = pd.DataFrame(data)
         embed = discord.Embed(title="Frequently Asked Questions", color=0x00FF00)
         for index, row in df.iterrows():
@@ -41,7 +48,7 @@ class Faq(commands.GroupCog, name="faq"):
     )
     @app_commands.describe(prefix="Prefix to search for")
     async def search(self, intr: discord.Interaction, prefix: str):
-        data = self.faq_sheet.get_all_records()
+        data = self._sheet().get_all_records()
         df = pd.DataFrame(data)
 
         # make an embed with bolded question followed by (prefix: prefix) and in newline plain text the answer
@@ -72,7 +79,7 @@ class Faq(commands.GroupCog, name="faq"):
         question: str,
         answer: str,
         prefix: str,
-        category: str = None,
+        category: Optional[str] = None,
     ):
         if not self.isAdmin(intr.user):
             await intr.response.send_message(
@@ -84,14 +91,15 @@ class Faq(commands.GroupCog, name="faq"):
             category = "General"
 
         # dont add question if the prefix already exists
-        data = self.faq_sheet.get_all_records()
+        sheet = self._sheet()
+        data = sheet.get_all_records()
         df = pd.DataFrame(data)
         for index, row in df.iterrows():
             if row["Prefix"] == prefix:
                 await intr.response.send_message("Prefix already exists!")
                 return
 
-        self.faq_sheet.append_row([question, answer, 1, category, prefix])
+        sheet.append_row([question, answer, 1, category, prefix])
         await intr.response.send_message("Added new question to faq sheet!")
 
     # faq delete <prefix>
@@ -106,13 +114,14 @@ class Faq(commands.GroupCog, name="faq"):
             )
             return
 
-        data = self.faq_sheet.get_all_records()
+        sheet = self._sheet()
+        data = sheet.get_all_records()
         df = pd.DataFrame(data)
 
         # delete the row with the prefix
-        for index, row in df.iterrows():
+        for index, row in enumerate(df.to_dict("records")):
             if row["Prefix"] == prefix:
-                self.faq_sheet.delete_row(index + 2)
+                sheet.delete_row(index + 2)
                 await intr.response.send_message("Deleted question from faq sheet!")
                 return
 
@@ -128,9 +137,9 @@ class Faq(commands.GroupCog, name="faq"):
         self,
         intr: discord.Interaction,
         prefix: str,
-        question: str = None,
-        answer: str = None,
-        category: str = None,
+        question: Optional[str] = None,
+        answer: Optional[str] = None,
+        category: Optional[str] = None,
     ):
         if not self.isAdmin(intr.user):
             await intr.response.send_message(
@@ -138,18 +147,19 @@ class Faq(commands.GroupCog, name="faq"):
             )
             return
 
-        data = self.faq_sheet.get_all_records()
+        sheet = self._sheet()
+        data = sheet.get_all_records()
         df = pd.DataFrame(data)
 
         # edit the row with the prefix
-        for index, row in df.iterrows():
+        for index, row in enumerate(df.to_dict("records")):
             if row["Prefix"] == prefix:
                 if question is not None:
-                    self.faq_sheet.update_cell(index + 2, 1, question)
+                    sheet.update_cell(index + 2, 1, question)
                 if answer is not None:
-                    self.faq_sheet.update_cell(index + 2, 2, answer)
+                    sheet.update_cell(index + 2, 2, answer)
                 if category is not None:
-                    self.faq_sheet.update_cell(index + 2, 4, category)
+                    sheet.update_cell(index + 2, 4, category)
                 await intr.response.send_message("Edited question from faq sheet!")
                 return
 

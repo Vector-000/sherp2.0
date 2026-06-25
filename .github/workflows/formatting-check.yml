@@ -26,3 +26,6 @@ jobs:
 
       - name: Run Ruff format check
         run: uv run --locked ruff format --check .
+
+      - name: Run Ty type check
+        run: uv run --locked ty check
