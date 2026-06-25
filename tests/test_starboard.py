@@ -188,6 +188,11 @@ def test_starboard_forbidden_onphone_case_posts_fallback_to_source_channel():
         "Please <:OnPhone:1062142401973588039> my petition"
         in petition_embed.description
     )
+    assert "tenor.com" not in petition_embed.description
+    assert (
+        petition_embed.to_dict()["image"]["url"]
+        == "https://media1.tenor.com/m/zdkG7NnnREoAAAAd/propaganda.gif"
+    )
     fallback_msg.add_reaction.assert_awaited_once_with("<:OnPhone:1062142401973588039>")
     assert starboard.starboard_msgs[123] == {
         "post_id": 789,
@@ -224,7 +229,7 @@ def test_starboard_forbidden_other_emoji_posts_fallback_to_source_channel():
     )
     assert (
         petition_embed.to_dict()["image"]["url"]
-        == "https://tenor.com/en-CA/view/propaganda-gif-19992759"
+        == "https://media1.tenor.com/m/zdkG7NnnREoAAAAd/propaganda.gif"
     )
     fallback_msg.add_reaction.assert_awaited_once_with("👍")
     assert starboard.starboard_msgs[123] == {

@@ -8,7 +8,7 @@ __DEFAULT_CHANNEL_ID = 1133260871049691257
 __DEFAULT_ONPHONE_EMOJI_STR = "<:OnPhone:1062142401973588039>"
 __DEFAULT_ONPHONE_THRESHOLD = 3
 __DEFAULT_OTHER_THRESHOLD = 5
-PROPAGANDA_GIF_URL = "https://tenor.com/en-CA/view/propaganda-gif-19992759"
+PROPAGANDA_GIF_URL = "https://media1.tenor.com/m/zdkG7NnnREoAAAAd/propaganda.gif"
 
 __cfg = get_config().get("starboard", None)
 STARBOARD_CHANNEL_ID = (
@@ -122,8 +122,7 @@ class Starboard(commands.Cog):
         return discord.Embed(
             description=(
                 "I would love to starboard your message but I don't have access "
-                f"to that channel. Please {self.onphone_emoji_str} my petition\n"
-                f"{PROPAGANDA_GIF_URL}"
+                f"to that channel. Please {self.onphone_emoji_str} my petition"
             ),
             color=discord.Color.gold(),
         ).set_image(url=PROPAGANDA_GIF_URL)
