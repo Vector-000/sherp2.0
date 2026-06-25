@@ -1,4 +1,5 @@
-import os, aiohttp
+import os
+import aiohttp
 
 
 async def save_attachment(attachment):

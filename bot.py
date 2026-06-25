@@ -20,7 +20,9 @@ load_dotenv()
 # create a client with all intents
 app_id = os.getenv("DISCORD_APP_ID")
 
-client = commands.Bot(command_prefix="?", intents=discord.Intents.all(), application_id=app_id)
+client = commands.Bot(
+    command_prefix="?", intents=discord.Intents.all(), application_id=app_id
+)
 _commands_synced = False
 
 
@@ -80,7 +82,9 @@ for command, response in cmds.items():
     )
 
 
-@client.tree.command(name="pasta", description="Send a random copypasta.", guilds=GUILDS)
+@client.tree.command(
+    name="pasta", description="Send a random copypasta.", guilds=GUILDS
+)
 async def pasta_slash(interaction: discord.Interaction):
     await interaction.response.send_message(random.choice(pastas))
 

@@ -23,7 +23,7 @@ async def get_problems():
             soup = BeautifulSoup(html, "html.parser")
 
             for item in soup.tbody.children:
-                if not type(item) is bs4.element.Tag:
+                if type(item) is not bs4.element.Tag:
                     continue
                 problem_id = item.a["href"].split("/")[-1]
                 assert problem_id, "Problem ID not valid"

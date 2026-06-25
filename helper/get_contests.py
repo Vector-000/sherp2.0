@@ -16,7 +16,7 @@ async def get_contests():
         soup = BeautifulSoup(html, "html.parser")
 
         for item in soup.tbody.children:
-            if not type(item) is bs4.element.Tag:
+            if type(item) is not bs4.element.Tag:
                 continue
             contest = item.a["href"].split("/")[-1]
             assert contest, "Contest url not found"

@@ -1,4 +1,4 @@
-name: Black Check
+name: Ruff Check
 
 # Run action on PRs to master
 on:
@@ -10,8 +10,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so that black can inspect it
-      - uses: actions/checkout@v2
-      - uses: rgasper/python-black-pull-request-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --dev
+
+      - name: Run Ruff lint
+        run: uv run --locked ruff check .
+
+      - name: Run Ruff format check
+        run: uv run --locked ruff format --check .

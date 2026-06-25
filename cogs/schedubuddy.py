@@ -2,7 +2,6 @@ import asyncio
 import json
 from io import BytesIO
 from typing import Optional
-from urllib.parse import quote
 
 import discord
 from aiohttp import ClientSession

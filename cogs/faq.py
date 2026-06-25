@@ -80,7 +80,7 @@ class Faq(commands.GroupCog, name="faq"):
             )
             return
 
-        if category == None:
+        if category is None:
             category = "General"
 
         # dont add question if the prefix already exists
@@ -144,11 +144,11 @@ class Faq(commands.GroupCog, name="faq"):
         # edit the row with the prefix
         for index, row in df.iterrows():
             if row["Prefix"] == prefix:
-                if question != None:
+                if question is not None:
                     self.faq_sheet.update_cell(index + 2, 1, question)
-                if answer != None:
+                if answer is not None:
                     self.faq_sheet.update_cell(index + 2, 2, answer)
-                if category != None:
+                if category is not None:
                     self.faq_sheet.update_cell(index + 2, 4, category)
                 await intr.response.send_message("Edited question from faq sheet!")
                 return

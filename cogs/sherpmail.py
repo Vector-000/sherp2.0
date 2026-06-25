@@ -37,7 +37,7 @@ class SherpMailbox(commands.Cog):
             await self.sherp.send(embed=embed)
 
             embed = discord.Embed(
-                title=f"📫 Outgoing! The following message has been mailed to Sherp:",
+                title="📫 Outgoing! The following message has been mailed to Sherp:",
                 description=f"{msg}",
                 colour=discord.Colour.green(),
             )
@@ -45,9 +45,9 @@ class SherpMailbox(commands.Cog):
                 text=f"From: {interaction.user} | UID: {interaction.user.id}"
             )
             await interaction.response.send_message(embed=embed)
-        except:
+        except Exception:
             await interaction.response.send_message(
-                f"❌ An unexpected error has occurred!"
+                "❌ An unexpected error has occurred!"
             )
 
     @commands.Cog.listener()
@@ -62,23 +62,23 @@ class SherpMailbox(commands.Cog):
                     colour=discord.Colour.gold(),
                 )
                 embed.set_footer(
-                    text=f"Another task completed by the Sherpmail distribution system."
+                    text="Another task completed by the Sherpmail distribution system."
                 )
                 # I used the ID 1183281507842924645 from the channel "non-cs-nonsense"
                 ch = self.bot.get_channel(1183281507842924645)
                 await ch.send(embed=embed)
 
                 embed = discord.Embed(
-                    title=f"📫 Outgoing! The following reply was sent:",
+                    title="📫 Outgoing! The following reply was sent:",
                     description=f"{message.content}",
                     colour=discord.Colour.green(),
                 )
                 embed.set_footer(
-                    text=f"Another task completed by the Sherpmail distribution system."
+                    text="Another task completed by the Sherpmail distribution system."
                 )
                 await message.reply(embed=embed, mention_author=False)
-            except:
-                await message.reply(f"❌ An unexpected error has occurred!")
+            except Exception:
+                await message.reply("❌ An unexpected error has occurred!")
 
 
 async def setup_SherpMailbox_cog(bot, guilds):

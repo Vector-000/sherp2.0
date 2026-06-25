@@ -23,8 +23,7 @@ Here are the steps you need to follow if you want to run the bot locally for tes
 
 ### Prerequisites:
 1. A discord server that you can invite the bot to and do testing.
-2. python3
-3. pip
+2. [uv](https://docs.astral.sh/uv/)
 
 ### Steps:
 1. Create a discord bot for testing using the Discord Developer Portal https://discord.com/developers/applications
@@ -47,17 +46,25 @@ Here are the steps you need to follow if you want to run the bot locally for tes
 ```python
 BOT_TOKEN = 'MTEwMjMzNzc5ODQ1NzAxNjUyMw.GsbpKF.6Vocc_sXkDgXcH9Yv_Hhbayz6zhjc2FIgA4H9k'
 ```
-   * install requirements using:
-```python
-pip install -r requirements.txt
+   * install dependencies using:
+```bash
+uv sync --dev
 ```
    * run the bot using:
 ```
-python .\bot.py
+uv run python bot.py
 ```
    * when running the bot for the first time, please run `?sync` in order for slash commands to work without issue
 
 ## Contributing
+
+Format and lint Python code with Ruff:
+```bash
+uv run ruff format .
+uv run ruff check .
+```
+
+CI and Docker install from `pyproject.toml` and the committed `uv.lock`.
 
 Pull requests are welcome. For major changes, please open an issue first
 to discuss what you would like to change.

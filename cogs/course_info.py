@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from discord.app_commands import Choice
 
 import json
 from typing import Optional
@@ -23,11 +22,11 @@ class CourseInfo(commands.GroupCog, name="course"):
     async def get_course_or_err(
         self, dept: str, course: str, intr: discord.Interaction
     ) -> Optional[dict]:
-        if not dept in self.courses:
+        if dept not in self.courses:
             await intr.response.send_message(f"Could not find **{dept}**")
             return None
 
-        if not course in self.courses[dept]:
+        if course not in self.courses[dept]:
             await intr.response.send_message(
                 f"Could not find **{course}** in the {dept} department"
             )
@@ -68,7 +67,7 @@ class CourseInfo(commands.GroupCog, name="course"):
         course_info = await self.get_course_or_err(dept, course, intr)
         if not course_info:
             return
-        if not "desc" in course_info:
+        if "desc" not in course_info:
             await intr.response.send_message(
                 f"There is no available course description for **{dept} {course}**."
             )

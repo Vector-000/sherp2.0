@@ -294,7 +294,7 @@ class Starboard(commands.Cog):
 
     @commands.Cog.listener()
     async def on_reaction_remove(self, react: discord.Reaction, _: discord.User):
-        if not react.message.id in self.starboard_msgs:
+        if react.message.id not in self.starboard_msgs:
             return
 
         await self.update_reaction_count(react)

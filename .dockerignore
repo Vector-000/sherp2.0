@@ -1,9 +1,9 @@
-.env
-__pycache__/
+.git/
+.pytest_cache/
 .ruff_cache/
-schedule.png
-env/
 .venv/
-attachments/
+env/
+__pycache__/
+*.py[cod]
 bot_config.toml
 sherp-service-account-key.json
