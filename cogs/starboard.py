@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import discord
 from discord.ext import commands
 
@@ -52,8 +52,30 @@ class Starboard(commands.Cog):
             return self.onphone_threshold
         return self.other_threshold
 
-    def _get_title(self, react: discord.Reaction) -> str:
-        return f"{react.emoji} x **{react.count}** |{react.message.channel.mention}"
+    def _get_qualifying_reactions(
+        self, msg: discord.Message, fallback_react: Optional[discord.Reaction] = None
+    ) -> List[discord.Reaction]:
+        reactions = list(getattr(msg, "reactions", None) or [])
+        if fallback_react and all(
+            str(reaction.emoji) != str(fallback_react.emoji) for reaction in reactions
+        ):
+            reactions.append(fallback_react)
+
+        return [
+            reaction
+            for reaction in reactions
+            if reaction.count >= self._get_threshold(str(reaction.emoji))
+        ]
+
+    def _get_title(self, react: discord.Reaction) -> Optional[str]:
+        reactions = self._get_qualifying_reactions(react.message, react)
+        if not reactions:
+            return None
+
+        counts = " ".join(
+            f"{reaction.emoji} x **{reaction.count}**" for reaction in reactions
+        )
+        return f"{counts} |{react.message.channel.mention}"
 
     async def _get_open_msg_view(self, msg: discord.Message) -> discord.ui.View:
         btn = discord.ui.Button(label="Jump", url=msg.jump_url)
@@ -68,11 +90,28 @@ class Starboard(commands.Cog):
         return v.add_item(discord.ui.Button(label="Context", url=reply.jump_url))
 
     async def update_reaction_count(self, react: discord.Reaction) -> None:
+        title = self._get_title(react)
+        if title is None:
+            await self.delete_starboard_post(react.message.id)
+            return
+
         record = self.starboard_msgs[react.message.id]
         msg_id = record["post_id"]
         channel = record.get("channel", self.starboard_channel)
         msg: discord.Message = await channel.fetch_message(msg_id)
-        await msg.edit(content=self._get_title(react))
+        await msg.edit(content=title)
+
+    async def delete_starboard_post(self, message_id: int) -> None:
+        record = self.starboard_msgs.pop(message_id, None)
+        if not record:
+            return
+
+        channel = record.get("channel", self.starboard_channel)
+        try:
+            msg = await channel.fetch_message(record["post_id"])
+            await msg.delete()
+        except discord.HTTPException:
+            pass
 
     def _get_first_viable_attachment_url(self, atmnts: List[discord.Attachment]) -> str:
         for a in atmnts:
@@ -142,8 +181,12 @@ class Starboard(commands.Cog):
         embeds: List[discord.Embed],
         open_msg_view: discord.ui.View,
     ) -> None:
+        title = self._get_title(react)
+        if title is None:
+            return
+
         msg: discord.Message = await channel.send(
-            self._get_title(react), embeds=embeds, view=open_msg_view
+            title, embeds=embeds, view=open_msg_view
         )
         self.starboard_msgs[react.message.id] = {
             "post_id": msg.id,
@@ -192,8 +235,7 @@ class Starboard(commands.Cog):
             return
 
         if react.message.id in self.starboard_msgs:
-            if self.starboard_msgs[react.message.id]["emoji"] == emoji:
-                await self.update_reaction_count(react)
+            await self.update_reaction_count(react)
         else:
             await self.create_starboard_post(react)
 
@@ -202,17 +244,11 @@ class Starboard(commands.Cog):
         if not react.message.id in self.starboard_msgs:
             return
 
-        if self.starboard_msgs[react.message.id]["emoji"] != str(react.emoji):
-            return
-
         await self.update_reaction_count(react)
 
     @commands.Cog.listener()
     async def on_message_delete(self, msg: discord.Message):
-        if msg_id := self.starboard_msgs.get(msg.id, None):
-            channel = msg_id.get("channel", self.starboard_channel)
-            m = await channel.fetch_message(msg_id["post_id"])
-            await m.delete()
+        await self.delete_starboard_post(msg.id)
 
 
 async def setup_starboard(bot, guilds):

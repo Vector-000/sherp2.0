@@ -34,13 +34,16 @@ class FakeBot:
         return SimpleNamespace()
 
 
-def make_reaction(count, emoji="<:OnPhone:1062142401973588039>", channel=None):
+def make_reaction(
+    count, emoji="<:OnPhone:1062142401973588039>", channel=None, reactions=None
+):
     return SimpleNamespace(
         emoji=emoji,
         count=count,
         message=SimpleNamespace(
             id=123,
             channel=channel or FakeChannel(),
+            reactions=reactions or [],
         ),
     )
 
@@ -103,26 +106,101 @@ def test_starboard_posts_other_emoji_at_five_reactions():
     starboard.update_reaction_count.assert_not_called()
 
 
-def test_starboard_tracks_only_the_emoji_that_created_the_post():
+def test_starboard_title_includes_all_qualifying_reactions():
     starboard = Starboard(FakeBot())
-    starboard.create_starboard_post = AsyncMock()
-    starboard.update_reaction_count = AsyncMock()
-    starboard.starboard_msgs[123] = {"post_id": 789, "emoji": "👍"}
+    reactions = [
+        SimpleNamespace(emoji="<:OnPhone:1062142401973588039>", count=3),
+        SimpleNamespace(emoji="👍", count=5),
+        SimpleNamespace(emoji="👎", count=4),
+    ]
+    react = make_reaction(5, emoji="👍", reactions=reactions)
+
+    assert (
+        starboard._get_title(react)
+        == "<:OnPhone:1062142401973588039> x **3** 👍 x **5** |#general"
+    )
+
+
+def test_starboard_updates_existing_post_when_new_emoji_qualifies():
+    starboard = Starboard(FakeBot())
+    starboarded_msg = SimpleNamespace(edit=AsyncMock())
+    starboard_channel = SimpleNamespace(
+        fetch_message=AsyncMock(return_value=starboarded_msg)
+    )
+    starboard.starboard_msgs[123] = {
+        "post_id": 789,
+        "emoji": "<:OnPhone:1062142401973588039>",
+        "channel": starboard_channel,
+    }
+    reactions = [
+        SimpleNamespace(emoji="<:OnPhone:1062142401973588039>", count=3),
+        SimpleNamespace(emoji="👍", count=5),
+    ]
 
     asyncio.run(
         starboard.on_reaction_add(
-            make_reaction(6, emoji="<:OnPhone:1062142401973588039>"),
+            make_reaction(5, emoji="👍", reactions=reactions),
             SimpleNamespace(),
         )
     )
 
-    starboard.update_reaction_count.assert_not_called()
-
-    asyncio.run(
-        starboard.on_reaction_add(make_reaction(6, emoji="👍"), SimpleNamespace())
+    starboarded_msg.edit.assert_awaited_once_with(
+        content="<:OnPhone:1062142401973588039> x **3** 👍 x **5** |#general"
     )
 
-    starboard.update_reaction_count.assert_awaited_once()
+
+def test_starboard_removes_reaction_from_title_when_it_drops_below_threshold():
+    starboard = Starboard(FakeBot())
+    starboarded_msg = SimpleNamespace(edit=AsyncMock())
+    starboard_channel = SimpleNamespace(
+        fetch_message=AsyncMock(return_value=starboarded_msg)
+    )
+    starboard.starboard_msgs[123] = {
+        "post_id": 789,
+        "emoji": "<:OnPhone:1062142401973588039>",
+        "channel": starboard_channel,
+    }
+    reactions = [
+        SimpleNamespace(emoji="<:OnPhone:1062142401973588039>", count=2),
+        SimpleNamespace(emoji="👍", count=5),
+    ]
+
+    asyncio.run(
+        starboard.on_reaction_remove(
+            make_reaction(
+                2, emoji="<:OnPhone:1062142401973588039>", reactions=reactions
+            ),
+            SimpleNamespace(),
+        )
+    )
+
+    starboarded_msg.edit.assert_awaited_once_with(content="👍 x **5** |#general")
+
+
+def test_starboard_deletes_post_when_no_reactions_still_qualify():
+    starboard = Starboard(FakeBot())
+    starboarded_msg = SimpleNamespace(delete=AsyncMock())
+    starboard_channel = SimpleNamespace(
+        fetch_message=AsyncMock(return_value=starboarded_msg)
+    )
+    starboard.starboard_msgs[123] = {
+        "post_id": 789,
+        "emoji": "<:OnPhone:1062142401973588039>",
+        "channel": starboard_channel,
+    }
+    reactions = [SimpleNamespace(emoji="<:OnPhone:1062142401973588039>", count=2)]
+
+    asyncio.run(
+        starboard.on_reaction_remove(
+            make_reaction(
+                2, emoji="<:OnPhone:1062142401973588039>", reactions=reactions
+            ),
+            SimpleNamespace(),
+        )
+    )
+
+    starboarded_msg.delete.assert_awaited_once()
+    assert starboard.starboard_msgs == {}
 
 
 def test_starboard_ignores_reactions_in_starboard_channel():
