@@ -20,9 +20,12 @@ load_dotenv()
 # create a client with all intents
 app_id = os.getenv("DISCORD_APP_ID")
 
-client = commands.Bot(
-    command_prefix="?", intents=discord.Intents.all(), application_id=app_id
-)
+if app_id:
+    client = commands.Bot(
+        command_prefix="?", intents=discord.Intents.all(), application_id=int(app_id)
+    )
+else:
+    client = commands.Bot(command_prefix="?", intents=discord.Intents.all())
 _commands_synced = False
 
 
