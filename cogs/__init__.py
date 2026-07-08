@@ -4,8 +4,8 @@ from .misc import setup_misc_cog
 from .snipe import setup_snipe
 from .course_info import setup_course_info
 from .starboard import setup_starboard
+from .wallofshame import setup_wall_of_shame
 from .faq import setup_faq
-from .votedelete import setup_votedelete
 from .sherpmail import setup_SherpMailbox_cog
 from .ship import setup_ship
 
@@ -24,8 +24,8 @@ async def setup_all_cogs(bot, guilds, client=None):
         setup_snipe(bot, guilds, client),
         setup_course_info(bot, guilds),
         setup_starboard(bot, guilds),
+        setup_wall_of_shame(bot, guilds),
         setup_faq(bot, guilds),
-        setup_votedelete(bot, guilds),
         setup_SherpMailbox_cog(bot, guilds),
         setup_ship(bot, guilds),
         return_exceptions=True,

@@ -18,13 +18,15 @@ channel=1139734225390669875         # The channel ID where the bot should post t
 onphone_emoji="<:OnP:1139749947357544500>"  # The string representation of the OnPhone emoji.
 onphone_threshold=3                         # OnPhone reactions needed to post to starboard.
 other_threshold=5                           # Other emoji reactions needed to post to starboard.
+excluded_emojis=["<:ban:939740396286791741>"]   # Emojis that can never post to the starboard
+                                                # (e.g. emojis reserved for other boards).
 
 [faq]
 gsheet_url = "https://docs.google.com/spreadsheets/d/15vOVv21KZETGxBEBY46H-l5C0WFjLaBUg1xUzFvSk6I/edit#gid=0" # replace this url with your gsheet url
 admin_role_name = "mod" # add the name of the role that provides users with elevated permissions to add/delete/modify FAQs
 
-[votedelete]
-
-ignored_channels = [] # Channel IDs where the bot shouldn't be able to delete messages.
-emoji = "<:ban:939740396286791741>" # The string representation of the emoji to be used to votedelete messages.
-threshold = 5 # The threshold over which the message reacted to will be deleted.
+[wallofshame]
+channel=1519463378903629824                 # The channel ID where the bot should post the
+                                            # wall-of-shame messages.
+ban_emoji="<:ban:939740396286791741>"       # The string representation of the Ban emoji.
+ban_threshold=3                             # Ban reactions needed to post to the wall-of-shame.
