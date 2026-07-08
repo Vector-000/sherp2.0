@@ -14,7 +14,7 @@ class MessageBoard(commands.Cog):
     #Override ``_get_threshold`` to change which emojis qualify and at what counts, return the threshold for a qualifying emoji.
     #Use ``None`` for an emoji that can never repost a message to the board.
     #Add the primary emoji of new board as a default excluded emoji into a list in starboard.py somewhere at the beginning.
-    #Add the new board to the bot in main.py, and add a config section for it in bot_config.toml.
+    #Add the new board to the bot in bot.py, and add a config section for it in bot_config.toml.
 
     board_name = "message board"
 
