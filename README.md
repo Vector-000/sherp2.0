@@ -13,6 +13,7 @@ sherp2.0 is a discord bot that answers frequently asked questions for students a
 - Slash Commands (credit: @DhanrajHira)
 - Starboard (credit: @ArtDynasty13)
 - OnPhone and Wall of Shame leaderboards (see [Leaderboards](#leaderboards))
+- Polls and votes (see [Polls and votes](#polls-and-votes))
 - Magic 8-ball
 - Shortcuts to many well known facts
 - Shortcuts to copypastas popular on the CS discord server
@@ -31,6 +32,17 @@ Commands (use them as slash commands or with the `?` prefix):
 - `/position` / `/wosposition`: your rank and the 5 members above and below you, visible only to you. The `?` prefix versions send the result by DM.
 
 Scores and the boards' posts are stored in a SQLite file (`db/boards.db` by default, set `db_path` under `[boards]` in `bot_config.toml` to change it), so both keep working for older messages after the bot restarts. When running in Docker, mount the `db/` directory on a volume (e.g. `-v sherp-db:/app/db`), otherwise they are lost when the container is recreated.
+
+## Polls and votes
+Anyone can post a poll in `#active_polls` or a vote in `#active_votes` and close their own whenever they like. Both use Discord's built-in polls, so members pick one option and can see the live results.
+
+- `?open_poll Question | Option 1 | Option 2`: post a poll. Separate the question and each option with `|`. A poll needs 2 to 10 options; the question can be up to 300 characters and each option up to 55.
+- `?open_vote Question | Option 1 | Option 2`: post a vote, in the same format.
+- `?close_poll` / `?close_vote`: pick one of your open polls or votes from a menu to close it. Voting stops and the final results stay visible in the channel.
+
+The only difference is that when a vote closes, its results are also posted in `#mod_chat`. Discord ends a poll automatically after 32 days; the bot then treats it as closed, and posts a vote's results in `#mod_chat` as usual.
+
+The bot finds the channels by name (`active_polls`, `active_votes` and `mod_chat`), or by the channel IDs under `[polls]` in `bot_config.toml`. It needs the View Channel, Send Messages, Send Polls and Read Message History permissions there, and Manage Messages to tidy up commands used inside the poll channels. Open polls and votes are tracked in a SQLite file (`db/polls.db` by default, set `db_path` under `[polls]` to change it), which should live on the same persistent volume as the boards database.
 
 ## Running the bot locally
 **Note:** If all you want to do is add new commands then you dont need to setup the bot, You can just clone the repo and contribute to `data/commands.json` or any of the other files in `data` folder. For more advanced changes, it is recommended to get a discord bot running locally to test functionality.

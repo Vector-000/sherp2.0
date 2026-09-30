@@ -10,6 +10,8 @@ from .sherpmail import setup_SherpMailbox_cog
 from .ship import setup_ship
 from .leaderboard import setup_leaderboard
 from .helpers.board_store import open_board_store
+from .polls import setup_polls
+from .helpers.poll_store import open_poll_store
 
 
 import asyncio
@@ -20,6 +22,7 @@ async def setup_all_cogs(bot, guilds, client=None):
     if not client:
         client = ClientSession()
     board_store = open_board_store()
+    poll_store = open_poll_store()
     results = await asyncio.gather(
         setup_schedule_buddy(bot, guilds, client),
         setup_kattis(bot, guilds),
@@ -32,6 +35,7 @@ async def setup_all_cogs(bot, guilds, client=None):
         setup_faq(bot, guilds),
         setup_SherpMailbox_cog(bot, guilds),
         setup_ship(bot, guilds),
+        setup_polls(bot, guilds, poll_store),
         return_exceptions=True,
     )
     for result in results:

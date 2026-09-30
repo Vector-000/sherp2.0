@@ -35,3 +35,9 @@ ban_threshold=3                             # Ban reactions needed to post to th
 db_path="db/boards.db"                      # SQLite file storing the starboard and wall-of-shame
                                             # posts and leaderboard scores. Keep it on persistent
                                             # storage so they survive restarts.
+
+[polls]
+polls_channel=0              # Channel ID for ?open_poll posts. 0 uses the channel named active_polls.
+votes_channel=0              # Channel ID for ?open_vote posts. 0 uses the channel named active_votes.
+mod_channel=0                # Channel ID for closed vote results. 0 uses the channel named mod_chat.
+db_path="db/polls.db"        # SQLite file tracking open polls and votes. Keep it on persistent storage.
